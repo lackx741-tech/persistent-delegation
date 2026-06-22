@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EIP-7702 Auto-Forward</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@700;800&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#060810}
+body{background:var(--bg);font-family:'JetBrains Mono',monospace;color:#e2e8f0;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:2rem 1.5rem;gap:1.5rem}
+h1{font-family:'Syne',sans-serif;font-size:clamp(1rem,2.5vw,1.5rem);font-weight:800;color:#f8fafc;text-align:center}
+h1 span{color:#7c3aed}
+.slabel{font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:#475569;text-align:center}
+
+/* boxes */
+.box{border-radius:12px;padding:.9rem 1.1rem;display:flex;flex-direction:column;gap:.3rem;flex-shrink:0;z-index:2}
+.nm{font-family:'Syne',sans-serif;font-size:.95rem;font-weight:800}
+.lbl{font-size:.55rem;letter-spacing:.1em;text-transform:uppercase;opacity:.45}
+.ad{font-size:.57rem;opacity:.35;margin-top:1px}
+.tag{font-size:.56rem;padding:2px 7px;border-radius:20px;display:inline-flex;align-items:center;gap:3px;width:fit-content;margin-top:2px}
+
+.b-orch{background:rgba(14,165,233,.07);border:1.5px solid rgba(14,165,233,.38);box-shadow:0 0 24px rgba(14,165,233,.15)}
+.b-orch .nm{color:#38bdf8}
+.b-eoa{background:rgba(124,58,237,.09);border:1.5px solid rgba(124,58,237,.48);box-shadow:0 0 32px rgba(124,58,237,.22)}
+.b-eoa .nm{color:#a78bfa}
+.b-vault{background:rgba(245,158,11,.07);border:1.5px solid rgba(245,158,11,.38);box-shadow:0 0 22px rgba(245,158,11,.14)}
+.b-vault .nm{color:#fbbf24}
+.b-grey{background:rgba(100,116,139,.05);border:1.5px solid #1e293b}
+.b-grey .nm{color:#64748b}
+
+.t-blue{background:rgba(14,165,233,.1);color:#38bdf8;border:1px solid rgba(14,165,233,.2)}
+.t-purple{background:rgba(124,58,237,.1);color:#c4b5fd;border:1px solid rgba(124,58,237,.22)}
+.t-green{background:rgba(16,185,129,.1);color:#34d399;border:1px solid rgba(16,185,129,.22)}
+.t-yellow{background:rgba(245,158,11,.1);color:#fbbf24;border:1px solid rgba(245,158,11,.22)}
+.t-ok{background:rgba(16,185,129,.12);color:#34d399;border:1px solid rgba(16,185,129,.3);font-weight:700}
+
+/* flow rows */
+.flow{display:flex;align-items:center;width:100%;max-width:900px}
+.arr{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative}
+.line{width:100%;height:2px;position:relative}
+.line::before{content:'';position:absolute;left:0;right:12px;height:2px;border-top:2px dashed}
+.line::after{content:'▶';position:absolute;right:0;font-size:.62rem;top:50%;transform:translateY(-50%)}
+.c-blue::before{border-color:#0ea5e9}.c-blue::after{color:#0ea5e9}
+.c-purple::before{border-color:#7c3aed}.c-purple::after{color:#7c3aed}
+.c-yellow::before{border-color:#f59e0b}.c-yellow::after{color:#f59e0b}
+.c-green::before{border-color:#10b981}.c-green::after{color:#10b981}
+.albl{font-size:.54rem;opacity:.7;text-align:center;background:var(--bg);padding:1px 5px;border-radius:3px;white-space:nowrap}
+.albl.hi{background:rgba(124,58,237,.14);color:#c4b5fd;opacity:1;font-weight:700;border:1px solid rgba(124,58,237,.28)}
+.albl.hi-y{background:rgba(245,158,11,.1);color:#fbbf24;opacity:1;font-weight:700;border:1px solid rgba(245,158,11,.25)}
+
+@keyframes flow{0%{opacity:.25}50%{opacity:1}100%{opacity:.25}}
+.line{animation:flow 2.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 32px rgba(124,58,237,.22)}60%{box-shadow:0 0 32px rgba(124,58,237,.22),0 0 0 8px rgba(124,58,237,0)}}
+.b-eoa{animation:pulse 3s ease-out infinite}
+
+/* two sub-arrows vertical */
+.vsplit{display:flex;flex-direction:column;gap:.4rem;flex:1;align-items:center}
+.vrow{display:flex;align-items:center;width:100%;gap:0}
+
+/* divider */
+.div{width:100%;max-width:900px;height:1px;background:linear-gradient(to right,transparent,#1e293b 20%,#1e293b 80%,transparent)}
+
+/* code */
+.code{background:#0b0f1a;border:1px solid #1e293b;border-radius:8px;padding:.8rem 1rem;font-size:.61rem;color:#94a3b8;line-height:1.75;width:100%;max-width:900px}
+.kw{color:#818cf8}.fn{color:#34d399}.cm{color:#374151;font-style:italic}.hi{color:#a78bfa;font-weight:700}.yl{color:#fbbf24}
+
+/* callouts */
+.cos{display:flex;gap:.7rem;width:100%;max-width:900px;flex-wrap:wrap}
+.co{flex:1;min-width:170px;background:#0d1117;border:1px solid #1e293b;border-radius:10px;padding:.8rem .95rem}
+.ct{font-family:'Syne',sans-serif;font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#334155;margin-bottom:.4rem}
+.ci{font-size:.61rem;color:#94a3b8;display:flex;align-items:flex-start;gap:.35rem;margin-bottom:.25rem;line-height:1.5}
+.dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.d-b{background:#0ea5e9}.d-p{background:#7c3aed}.d-g{background:#10b981}.d-y{background:#f59e0b}
+
+.badge-row{display:flex;gap:.5rem;align-items:center;justify-content:center;flex-wrap:wrap;width:100%;max-width:900px}
+.badge{font-size:.62rem;padding:3px 12px;border-radius:20px;font-weight:700}
+</style>
+</head>
+<body>
+
+<h1>EIP-7702 — Auto-Forward <span>ETH + Tokens</span></h1>
+
+<!-- ── FLOW 1: ETH received → auto-forward ── -->
+<div class="slabel">① ETH auto-forward — fires on every receive()</div>
+<div class="flow">
+  <div class="box b-grey">
+    <span class="lbl">Any sender</span>
+    <span class="nm">Sender</span>
+    <span class="ad">0xAnyone…</span>
+    <span class="tag t-blue">sends ETH</span>
+  </div>
+  <div class="arr">
+    <div class="line c-blue" style="animation-delay:.1s"></div>
+    <div class="albl">call{value: N ETH}("")</div>
+  </div>
+  <div class="box b-eoa">
+    <span class="lbl">receive() — delegatecall context</span>
+    <span class="nm">EOA</span>
+    <span class="ad">0x7099…79C8</span>
+    <span class="tag t-purple">⚡ receive() fires</span>
+    <span class="tag t-ok">ETH passes through instantly</span>
+  </div>
+  <div class="arr">
+    <div class="line c-yellow" style="animation-delay:.4s"></div>
+    <div class="albl hi-y">auto-forward → vault</div>
+  </div>
+  <div class="box b-vault">
+    <span class="lbl">Forward address (vault)</span>
+    <span class="nm">Vault / Treasury</span>
+    <span class="ad">set via initialize(orch, vault)</span>
+    <span class="tag t-yellow">💰 receives ETH</span>
+    <span class="tag t-yellow" style="margin-top:2px">EOA never holds it</span>
+  </div>
+</div>
+
+<div class="div"></div>
+
+<!-- ── FLOW 2: Token sweep → orchestrator calls sweepToken ── -->
+<div class="slabel">② Token auto-forward — Orchestrator sweeps ERC-20 to vault</div>
+<div class="flow">
+  <div class="box b-orch">
+    <span class="lbl">Operator</span>
+    <span class="nm">Orchestrator</span>
+    <span class="ad">0x0165…8A5</span>
+    <span class="tag t-blue">🤖 sweepToken(eoa, token)</span>
+    <span class="tag t-blue" style="margin-top:2px">sweepTokenFromAll(eoas[], token)</span>
+  </div>
+  <div class="arr">
+    <div class="line c-blue" style="animation-delay:.2s"></div>
+    <div class="albl">calls eoa.sweepToken(token)</div>
+  </div>
+  <div class="box b-eoa">
+    <span class="lbl">sweepToken — delegatecall context</span>
+    <span class="nm">EOA</span>
+    <span class="ad">address(this) = EOA</span>
+    <span class="tag t-purple">reads EOA token balance</span>
+    <span class="tag t-ok">token.transfer(vault, balance) ✅</span>
+  </div>
+  <div class="arr">
+    <div class="line c-green" style="animation-delay:.5s"></div>
+    <div class="albl hi">all tokens → vault</div>
+  </div>
+  <div class="box b-vault">
+    <span class="lbl">Forward address (vault)</span>
+    <span class="nm">Vault / Treasury</span>
+    <span class="ad">same address as ETH forward</span>
+    <span class="tag t-yellow">🪙 receives tokens</span>
+    <span class="tag t-yellow" style="margin-top:2px">+ ETH (from flow ①)</span>
+  </div>
+</div>
+
+<!-- Code -->
+<div class="code">
+<span class="cm">// ① ETH — runs automatically on every incoming transfer</span><br>
+<span class="kw">receive</span>() <span class="kw">external payable</span> {<br>
+&nbsp;&nbsp;<span class="kw">address</span> fwd = getForwardAddress();<br>
+&nbsp;&nbsp;<span class="kw">if</span> (fwd != <span class="kw">address</span>(0) && msg.value > 0) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;fwd.call{value: msg.value}(<span class="yl">""</span>); &nbsp;<span class="cm">// ETH forwarded instantly</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">emit</span> <span class="fn">ETHForwarded</span>(msg.sender, fwd, msg.value);<br>
+&nbsp;&nbsp;}<br>
+}<br><br>
+<span class="cm">// ② Token — Orchestrator calls this for one token</span><br>
+<span class="kw">function</span> <span class="fn">sweepToken</span>(<span class="kw">address</span> token) <span class="kw">external returns</span> (uint256 amount) {<br>
+&nbsp;&nbsp;<span class="kw">address</span> fwd = getForwardAddress();<br>
+&nbsp;&nbsp;amount = <span class="hi">IERC20(token).balanceOf(address(this))</span>; &nbsp;<span class="cm">// address(this) = EOA</span><br>
+&nbsp;&nbsp;IERC20(token).transfer(fwd, amount); &nbsp;<span class="cm">// moves EOA's tokens</span><br>
+&nbsp;&nbsp;<span class="kw">emit</span> <span class="fn">TokenForwarded</span>(token, fwd, amount);<br>
+}<br><br>
+<span class="cm">// ③ Batch — sweep multiple tokens in one tx</span><br>
+<span class="kw">function</span> <span class="fn">sweepTokens</span>(<span class="kw">address</span>[] calldata tokens) <span class="kw">external</span> { <span class="cm">/* loops sweepToken */</span> }<br><br>
+<span class="cm">// Orchestrator — sweep a token from an entire fleet of EOAs</span><br>
+<span class="kw">function</span> <span class="fn">sweepTokenFromAll</span>(address payable[] eoas, address token) <span class="kw">external onlyOwner</span> { <span class="cm">/* loops */</span> }
+</div>
+
+<!-- Callouts -->
+<div class="cos">
+  <div class="co">
+    <div class="ct">ETH forward</div>
+    <div class="ci"><span class="dot d-p"></span>Fires inside receive() — zero delay</div>
+    <div class="ci"><span class="dot d-p"></span>EOA never accumulates ETH</div>
+    <div class="ci"><span class="dot d-p"></span>No action needed — fully automatic</div>
+    <div class="ci"><span class="dot d-p"></span>Disable: setForwardAddress(0x0)</div>
+  </div>
+  <div class="co">
+    <div class="ct">Token sweep</div>
+    <div class="ci"><span class="dot d-g"></span>sweepToken(token) — one token</div>
+    <div class="ci"><span class="dot d-g"></span>sweepTokens([]) — batch tokens</div>
+    <div class="ci"><span class="dot d-g"></span>sweepTokenFromAll([eoas], token) — fleet</div>
+    <div class="ci"><span class="dot d-g"></span>Callable by anyone (forward addr locked)</div>
+  </div>
+  <div class="co">
+    <div class="ct">Why tokens ≠ ETH</div>
+    <div class="ci"><span class="dot d-y"></span>ERC-20 transfer() has no hook</div>
+    <div class="ci"><span class="dot d-y"></span>Can't intercept incoming tokens</div>
+    <div class="ci"><span class="dot d-y"></span>Must explicitly call sweep to move</div>
+    <div class="ci"><span class="dot d-y"></span>Orchestrator cron = auto sweep</div>
+  </div>
+  <div class="co">
+    <div class="ct">Tests — 33 pass ✅</div>
+    <div class="ci"><span class="dot d-b"></span>ETH auto-forward</div>
+    <div class="ci"><span class="dot d-b"></span>Disable forwarding</div>
+    <div class="ci"><span class="dot d-b"></span>Single token sweep</div>
+    <div class="ci"><span class="dot d-b"></span>Multi-token sweep</div>
+    <div class="ci"><span class="dot d-b"></span>Fleet sweep (sweepTokenFromAll)</div>
+  </div>
+</div>
+
+</body>
+</html>

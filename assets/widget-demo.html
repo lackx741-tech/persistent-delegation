@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EIP-7702 Delegation Widget — CDN Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+/* ── RESET & BASE ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --g: #39ff85;
+  --g2: #00d4a8;
+  --b: #7dffef;
+  --amber: #ffa826;
+  --red: #ff4b5c;
+  --bg: #05080a;
+  --bg2: #090d10;
+  --bg3: #0e1418;
+  --border: rgba(57,255,133,0.15);
+  --border2: rgba(57,255,133,0.07);
+  --text: #c8e6d4;
+  --text2: #5a8a6a;
+  --text3: rgba(57,255,133,0.3);
+  --font-display: 'Syne', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── GRID TEXTURE ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(57,255,133,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(57,255,133,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── NOISE OVERLAY ── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  opacity: 0.4;
+  z-index: 0;
+}
+
+/* ── NAVBAR ── */
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  padding: 0 40px;
+  height: 64px;
+  background: rgba(5,8,10,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border2);
+}
+
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--g);
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 12px rgba(57,255,133,0.4);
+}
+
+.nav-hex { font-size: 20px; }
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  margin-left: auto;
+  list-style: none;
+}
+
+.nav-links a {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--text2);
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--g); }
+
+.nav-tag {
+  padding: 5px 14px;
+  background: rgba(57,255,133,0.08);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--g);
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font-mono);
+}
+.nav-tag:hover {
+  background: rgba(57,255,133,0.15);
+  box-shadow: 0 0 16px rgba(57,255,133,0.2);
+}
+
+/* ── MAIN CONTENT ── */
+main {
+  position: relative;
+  z-index: 1;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 120px 40px 160px;
+}
+
+/* ── HERO ── */
+.hero {
+  padding-bottom: 120px;
+  border-bottom: 1px solid var(--border2);
+}
+
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: var(--g);
+  text-transform: uppercase;
+  margin-bottom: 28px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: rgba(57,255,133,0.06);
+}
+
+.eyebrow-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--g);
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--g);
+  animation: blink 2s ease-in-out infinite;
+}
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+h1 {
+  font-family: var(--font-display);
+  font-size: clamp(42px, 7vw, 84px);
+  font-weight: 800;
+  line-height: 1.0;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  margin-bottom: 24px;
+}
+
+h1 .accent {
+  color: var(--g);
+  text-shadow: 0 0 40px rgba(57,255,133,0.3);
+}
+
+h1 .outline {
+  -webkit-text-stroke: 1.5px var(--g);
+  color: transparent;
+  text-shadow: none;
+}
+
+.hero-sub {
+  max-width: 580px;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.7;
+  color: var(--text2);
+  letter-spacing: 0.03em;
+  margin-bottom: 48px;
+}
+
+.hero-sub strong { color: var(--text); font-weight: 600; }
+
+.hero-ctas {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 64px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  text-decoration: none;
+  text-transform: uppercase;
+  border: none;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: var(--g);
+  color: #040d06;
+  box-shadow: 0 4px 24px rgba(57,255,133,0.3);
+}
+.btn-primary:hover {
+  box-shadow: 0 8px 36px rgba(57,255,133,0.5);
+  transform: translateY(-2px);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn-outline:hover { border-color: var(--g); color: var(--g); }
+
+/* ── CODE SNIPPET ── */
+.snippet-wrap {
+  position: relative;
+}
+
+.snippet-label {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--text2);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.snippet-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border2);
+}
+
+pre {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px 28px;
+  overflow-x: auto;
+  font-size: 12px;
+  line-height: 1.7;
+  letter-spacing: 0.03em;
+  position: relative;
+}
+
+pre::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--g), var(--b), transparent);
+  border-radius: 12px 12px 0 0;
+}
+
+.kw { color: #7dffef; }
+.str { color: #ffa826; }
+.cm { color: #3a5040; font-style: italic; }
+.fn { color: var(--g); }
+.pn { color: #a8d4b8; }
+.nb { color: #c8e6d4; }
+
+.copy-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: rgba(57,255,133,0.08);
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  padding: 5px 12px;
+  border-radius: 7px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.copy-btn:hover { color: var(--g); border-color: var(--border); }
+
+/* ── FEATURES GRID ── */
+.features {
+  padding: 100px 0;
+  border-bottom: 1px solid var(--border2);
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+  margin-bottom: 60px;
+}
+
+.section-num {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--text3);
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(24px, 3vw, 36px);
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 800px) {
+  .features-grid { grid-template-columns: 1fr 1fr; }
+  main { padding: 100px 24px 120px; }
+}
+@media (max-width: 560px) {
+  .features-grid { grid-template-columns: 1fr; }
+  nav { padding: 0 20px; }
+  .nav-links { display: none; }
+}
+
+.feature-card {
+  padding: 24px;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  transition: border-color 0.25s, background 0.25s;
+  cursor: default;
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--g), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.feature-card:hover { border-color: var(--border); background: var(--bg3); }
+.feature-card:hover::before { opacity: 1; }
+
+.feature-icon {
+  font-size: 24px;
+  margin-bottom: 14px;
+  display: block;
+}
+
+.feature-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.feature-desc {
+  font-size: 10px;
+  color: var(--text2);
+  line-height: 1.65;
+  letter-spacing: 0.03em;
+}
+
+/* ── INTEGRATION SECTION ── */
+.integration {
+  padding: 100px 0;
+  border-bottom: 1px solid var(--border2);
+}
+
+.integration-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .integration-grid { grid-template-columns: 1fr; }
+}
+
+.integration-steps { display: flex; flex-direction: column; gap: 24px; }
+
+.step {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.step-num {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--g);
+  flex-shrink: 0;
+  background: rgba(57,255,133,0.06);
+}
+
+.step-body { flex: 1; }
+.step-title { font-size: 11px; font-weight: 700; color: var(--text); letter-spacing: 0.08em; margin-bottom: 4px; }
+.step-desc { font-size: 10px; color: var(--text2); line-height: 1.6; }
+
+/* ── API REFERENCE ── */
+.api-section { padding: 100px 0; }
+
+.api-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+}
+
+.api-table th {
+  text-align: left;
+  padding: 10px 16px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--text2);
+  border-bottom: 1px solid var(--border2);
+}
+
+.api-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border2);
+  vertical-align: top;
+  line-height: 1.5;
+}
+
+.api-table tr:last-child td { border-bottom: none; }
+
+.api-table .param { color: var(--b); font-weight: 600; }
+.api-table .type  { color: var(--amber); }
+.api-table .desc  { color: var(--text2); }
+
+/* ── LIVE DEMO CALLOUT ── */
+.demo-callout {
+  margin: 80px 0;
+  padding: 40px;
+  background: linear-gradient(135deg, rgba(57,255,133,0.05), rgba(0,212,168,0.02));
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.demo-callout::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--g), var(--b), var(--amber));
+}
+
+.demo-callout-icon { font-size: 48px; flex-shrink: 0; }
+.demo-callout-body { flex: 1; }
+.demo-callout-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.demo-callout-sub { font-size: 11px; color: var(--text2); line-height: 1.6; letter-spacing: 0.03em; }
+.demo-callout-sub strong { color: var(--g); }
+
+/* ── FOOTER ── */
+footer {
+  position: relative;
+  z-index: 1;
+  padding: 40px;
+  border-top: 1px solid var(--border2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.footer-logo {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--g);
+  letter-spacing: 0.1em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.footer-links {
+  display: flex;
+  gap: 24px;
+  list-style: none;
+}
+
+.footer-links a {
+  font-size: 9px;
+  color: var(--text2);
+  text-decoration: none;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: color 0.2s;
+}
+.footer-links a:hover { color: var(--g); }
+
+.footer-right {
+  font-size: 9px;
+  color: var(--text3);
+  letter-spacing: 0.1em;
+}
+
+/* ── GLOW RADIAL ── */
+.glow-radial {
+  position: fixed;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(57,255,133,0.04) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+  top: -200px;
+  right: -100px;
+}
+
+/* ── SEPARATOR ── */
+.sep {
+  width: 40px;
+  height: 2px;
+  background: var(--g);
+  border-radius: 1px;
+  margin: 20px 0;
+  box-shadow: 0 0 8px var(--g);
+}
+
+/* ── BADGE ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  border: 1px solid;
+}
+.badge-green { background: rgba(57,255,133,0.08); border-color: rgba(57,255,133,0.25); color: var(--g); }
+.badge-blue  { background: rgba(125,255,239,0.08); border-color: rgba(125,255,239,0.25); color: var(--b); }
+.badge-amber { background: rgba(255,168,38,0.08); border-color: rgba(255,168,38,0.25); color: var(--amber); }
+
+.badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 32px; }
+</style>
+</head>
+<body>
+
+<div class="glow-radial"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <span class="nav-hex">⬡</span>
+    DELEGATION WIDGET
+  </div>
+  <ul class="nav-links">
+    <li><a href="#features">FEATURES</a></li>
+    <li><a href="#integration">INTEGRATE</a></li>
+    <li><a href="#api">API</a></li>
+    <li><a href="https://github.com" target="_blank">GITHUB ↗</a></li>
+    <li><button class="nav-tag" onclick="document.querySelector('.__delegation-widget__ *')">OPEN WIDGET ↗</button></li>
+  </ul>
+</nav>
+
+<main>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-eyebrow">
+      <div class="eyebrow-dot"></div>
+      METAMASK SMART ACCOUNTS KIT · EIP-7702
+    </div>
+
+    <div class="badges">
+      <span class="badge badge-green">⬡ EIP-7702</span>
+      <span class="badge badge-blue">CDN WIDGET</span>
+      <span class="badge badge-amber">SHADOW DOM</span>
+      <span class="badge badge-green">9KB GZIP</span>
+      <span class="badge badge-blue">ZERO DEPS</span>
+    </div>
+
+    <h1>
+      Persistent<br/>
+      <span class="accent">Delegation</span><br/>
+      <span class="outline">Widget</span>
+    </h1>
+
+    <div class="sep"></div>
+
+    <p class="hero-sub">
+      Drop <strong>one script tag</strong> into any SaaS and instantly gain EIP-7702 smart account
+      capabilities — wallet connection, persistent delegation, sponsored batch execution,
+      and auto-sweep ETH + tokens to your vault. No framework, no build step, no configuration.
+    </p>
+
+    <div class="hero-ctas">
+      <a href="#integration" class="btn btn-primary">⚡ GET STARTED</a>
+      <a href="#" class="btn btn-outline" onclick="window.open('https://debank.com/profile/0x0000000000000000000000000000000000000000','_blank')">
+        DEMO LIVE ↗
+      </a>
+    </div>
+
+    <div class="snippet-wrap">
+      <div class="snippet-label">MINIMUM INTEGRATION — 1 LINE</div>
+      <pre><code><span class="cm">&lt;!-- Drop into any HTML page — widget auto-initializes --&gt;</span>
+<span class="kw">&lt;script</span> <span class="pn">src</span>=<span class="str">"https://cdn.yourdomain.com/delegation-widget.iife.js"</span>
+        <span class="pn">data-relayer</span>=<span class="str">"https://your-relayer.com"</span>
+        <span class="pn">data-chain</span>=<span class="str">"MAINNET"</span><span class="kw">&gt;&lt;/script&gt;</span></code></pre>
+      <button class="copy-btn" onclick="copySnippet(this, `&lt;script src=&quot;https://cdn.yourdomain.com/delegation-widget.iife.js&quot; data-relayer=&quot;https://your-relayer.com&quot; data-chain=&quot;MAINNET&quot;&gt;&lt;/script&gt;`)">COPY</button>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="features" id="features">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <h2 class="section-title">Everything Included</h2>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="feature-icon">⬡</span>
+        <div class="feature-title">EIP-7702 Delegation</div>
+        <div class="feature-desc">One-click EOA → Smart Account upgrade. Persistent on-chain, survives page refreshes, works with any wallet.</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">⚡</span>
+        <div class="feature-title">Batch Execution</div>
+        <div class="feature-desc">Submit multiple calls in a single transaction. Sponsor pays gas via 1Shot relayer. EOA remains msg.sender.</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🔄</span>
+        <div class="feature-title">Auto-Sweep</div>
+        <div class="feature-desc">Configure a vault address. ETH and ERC-20 tokens are automatically forwarded every 60 seconds.</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🌐</span>
+        <div class="feature-title">Shadow DOM</div>
+        <div class="feature-desc">Zero style leakage. The widget is fully isolated — your CSS and the widget's CSS never interfere.</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">📊</span>
+        <div class="feature-title">DeBank Portfolio</div>
+        <div class="feature-desc">One-click deep link to DeBank's full portfolio view for any connected wallet address.</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🔑</span>
+        <div class="feature-title">Wallet-Agnostic</div>
+        <div class="feature-desc">Works with MetaMask, WalletConnect, Coinbase, any EIP-1193 provider — no SDK coupling.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INTEGRATION -->
+  <section class="integration" id="integration">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <h2 class="section-title">Integrate in 3 Steps</h2>
+    </div>
+
+    <div class="integration-grid">
+      <div class="integration-steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">DEPLOY YOUR RELAYER</div>
+            <div class="step-desc">Self-host the Node.js relayer (or use our hosted version). It handles gas sponsorship, delegation registry, and sweep scheduling.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">ADD THE SCRIPT TAG</div>
+            <div class="step-desc">One line of HTML. Point <code style="color:var(--g);font-size:11px">data-relayer</code> at your relayer. Widget auto-initializes on DOMContentLoaded.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">LISTEN TO EVENTS (OPTIONAL)</div>
+            <div class="step-desc">Widget emits DOM custom events for delegation, execution, and sweep. Subscribe to integrate with your app state.</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="snippet-wrap" style="margin-bottom:20px">
+          <div class="snippet-label">ADVANCED INIT (PROGRAMMATIC)</div>
+          <pre style="font-size:11px"><code><span class="cm">// Or init manually with full config</span>
+<span class="kw">window</span>.<span class="fn">DelegationWidget</span>.<span class="fn">init</span>({
+  <span class="pn">relayerUrl</span>: <span class="str">'https://relay.yourapp.com'</span>,
+  <span class="pn">position</span>:   <span class="str">'bottom-right'</span>,
+  <span class="pn">chainName</span>:  <span class="str">'MAINNET'</span>,
+})</code></pre>
+        </div>
+
+        <div class="snippet-wrap">
+          <div class="snippet-label">RELAYER SELF-HOSTED</div>
+          <pre style="font-size:11px"><code><span class="cm"># Deploy relayer (Node.js + Express)</span>
+<span class="fn">git</span> clone github.com/your/delegation-widget
+<span class="kw">cd</span> relayer
+<span class="fn">npm</span> install
+<span class="fn">npm</span> run start
+
+<span class="cm"># Relayer will be at :3001</span>
+<span class="cm"># GET /health — status check</span>
+<span class="cm"># POST /delegate — create delegation</span>
+<span class="cm"># POST /batch — execute batch tx</span>
+<span class="cm"># POST /sweeper/configure — configure sweep</span></code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- API TABLE -->
+  <section class="api-section" id="api">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <h2 class="section-title">Relayer API Reference</h2>
+    </div>
+    <div style="overflow-x:auto;border:1px solid var(--border2);border-radius:12px">
+      <table class="api-table">
+        <thead>
+          <tr>
+            <th>ENDPOINT</th>
+            <th>METHOD</th>
+            <th>BODY PARAMS</th>
+            <th>DESCRIPTION</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="param">/health</td>
+            <td><span class="badge badge-green">GET</span></td>
+            <td class="type">—</td>
+            <td class="desc">Returns relayer status, sponsor balance, block number, chain ID</td>
+          </tr>
+          <tr>
+            <td class="param">/delegate</td>
+            <td><span class="badge badge-amber">POST</span></td>
+            <td class="type">eoa: address</td>
+            <td class="desc">Signs EIP-7702 authorization and broadcasts delegation transaction</td>
+          </tr>
+          <tr>
+            <td class="param">/batch</td>
+            <td><span class="badge badge-amber">POST</span></td>
+            <td class="type">eoa, calls[{target,value,data}]</td>
+            <td class="desc">Executes sponsored batch call via delegated EOA. Gas paid by relayer sponsor.</td>
+          </tr>
+          <tr>
+            <td class="param">/sweeper/configure</td>
+            <td><span class="badge badge-amber">POST</span></td>
+            <td class="type">eoaAddress, forwardAddress, tokens[], enabled</td>
+            <td class="desc">Persist sweep config to DB. When enabled, sweeper runs every 60 seconds.</td>
+          </tr>
+          <tr>
+            <td class="param">/sweeper/status/:address</td>
+            <td><span class="badge badge-green">GET</span></td>
+            <td class="type">—</td>
+            <td class="desc">Returns sweep config, last run time, total sweeps for EOA</td>
+          </tr>
+          <tr>
+            <td class="param">/sweeper/sweep</td>
+            <td><span class="badge badge-amber">POST</span></td>
+            <td class="type">eoaAddress</td>
+            <td class="desc">Immediately trigger a sweep for this EOA (ignores schedule)</td>
+          </tr>
+          <tr>
+            <td class="param">/registry</td>
+            <td><span class="badge badge-green">GET</span></td>
+            <td class="type">—</td>
+            <td class="desc">List all delegated EOAs in the registry with batch counts</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- DEMO CALLOUT -->
+  <div class="demo-callout">
+    <div class="demo-callout-icon">⬡</div>
+    <div class="demo-callout-body">
+      <div class="demo-callout-title">Widget is live — bottom-right corner</div>
+      <div class="demo-callout-sub">
+        Click the <strong>⬡ 7702</strong> orb to open the widget. Connect any Ethereum wallet to try
+        delegation, batch execution, and auto-sweep configuration — all talking to
+        <strong>localhost:3001</strong> (your local Anvil relayer).
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="window.DelegationWidget?.instance?.togglePanel?.()">
+      OPEN WIDGET ↗
+    </button>
+  </div>
+
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">
+    <span>⬡</span> EIP-7702 DELEGATION WIDGET
+  </div>
+  <ul class="footer-links">
+    <li><a href="https://eips.ethereum.org/EIPS/eip-7702" target="_blank">EIP-7702</a></li>
+    <li><a href="https://1shot.dev" target="_blank">1SHOT API</a></li>
+    <li><a href="https://metamask.io/smart-accounts" target="_blank">METAMASK SAK</a></li>
+    <li><a href="https://debank.com" target="_blank">DEBANK</a></li>
+  </ul>
+  <div class="footer-right">HACKATHON BUILD · 2025</div>
+</footer>
+
+<script>
+function copySnippet(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent
+    btn.textContent = 'COPIED ✓'
+    btn.style.color = '#39ff85'
+    setTimeout(() => { btn.textContent = orig; btn.style.color = '' }, 2000)
+  })
+}
+</script>
+
+<!-- THE WIDGET — this is the entire integration -->
+<script src="../dist/delegation-widget.iife.js" data-relayer="http://localhost:3001" data-chain="ANVIL"></script>
+
+</body>
+</html>

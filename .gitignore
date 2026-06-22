@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+.DS_Store
+
+# Build artifacts
+frontend/dist/
+widget/dist/
+relayer/dist/
+
+# Foundry build cache (keep src/ and test/, ignore out/ and cache)
+contracts/out/
+contracts/cache/
+
+# SQLite data
+data/*.db
+data/*.db-shm
+data/*.db-wal
+
+# Env files
+.env
+.env.local
+relayer/.env
+
+# Logs
+*.log
+/tmp/
+
+# Foundry lib (install with: forge install)
+contracts/lib/
