@@ -38,12 +38,18 @@ export async function checkDelegation(
 }
 
 /**
- * Signs an EIP-7702 authorization for persistent delegation to BatchCallAndSponsor.
- * The authorization itself does NOT expire — it persists until revoked.
+ * Signs an EIP-7702 authorization for persistent delegation.
  *
- * NOTE: signAuthorization requires a LOCAL account (viem must hold the private key).
- * JSON-RPC accounts (MetaMask, WalletConnect) are not supported by viem for this action.
- * For local Anvil testing we use privateKeyToAccount directly.
+ * Per the canonical viem pattern:
+ *   walletClient.signAuthorization({ account: eoa, contractAddress: impl })
+ *
+ * The authorization is protocol-level — it allows the implementation contract's
+ * code to run in the EOA's context (delegatecall). It persists on-chain until
+ * explicitly revoked with a zero-address authorization.
+ *
+ * NOTE: signAuthorization requires a LOCAL viem account (privateKeyToAccount).
+ * JSON-RPC accounts (MetaMask, WalletConnect) cannot sign EIP-7702 authorizations
+ * via viem — the inner batch signing (signBatch) does work with any wallet.
  */
 export async function signDelegationAuthorization(localWalletClient: WalletClient) {
   const account = localWalletClient.account!

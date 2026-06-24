@@ -17,7 +17,7 @@
 import 'dotenv/config'
 import {
   createPublicClient, createWalletClient, http,
-  parseEther, keccak256,
+  parseEther, encodePacked, keccak256, toBytes,
 } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { anvil } from 'viem/chains'
@@ -126,7 +126,10 @@ async function run() {
   if (existingImpl) {
     inf(`Found existing delegation → clearing it first`)
     // Revoke by setting authorization to zero address
-    const revokeAuth = await eoaClient.signAuthorization({ contractAddress: '0x0000000000000000000000000000000000000000' })
+    const revokeAuth = await eoaClient.signAuthorization({
+      account: eoaAccount,
+      contractAddress: '0x0000000000000000000000000000000000000000',
+    })
     await sponsorClient.sendTransaction({ account: sponsorClient.account!, to: eoaAddress, value: 0n, authorizationList: [revokeAuth], chain: null })
     await new Promise(r => setTimeout(r, 1000))
     ok(`Existing delegation cleared`)
@@ -139,7 +142,10 @@ async function run() {
   inf(`EOA signs authorization → "allow ${IMPL_ADDRESS} to run as my code"`)
   inf(`This does NOT change the EOA address. Storage stays with the EOA.`)
 
-  const authorization = await eoaClient.signAuthorization({ contractAddress: IMPL_ADDRESS })
+  const authorization = await eoaClient.signAuthorization({
+    account: eoaAccount,
+    contractAddress: IMPL_ADDRESS,
+  })
   ok(`Authorization signed`)
   inf(`  address: ${(authorization as any).address ?? (authorization as any).contractAddress}`)
   inf(`  chainId: ${authorization.chainId}`)
@@ -178,36 +184,22 @@ async function run() {
   inf(`Batch: send 0.001 ETH from ${eoaAddress} → ${EOA_RECIPIENT}`)
   inf(`Recipient balance before: ${(Number(recipientBefore) / 1e18).toFixed(4)} ETH`)
 
-  // Build inner digest exactly as the contract does:
-  // keccak256(abi.encodePacked(nonce, to0, value0, data0, to1, value1, data1, ...))
-  // then wrapped with eth_sign prefix via toEthSignedMessageHash
-  let packed = '0x' as `0x${string}`
-  // Pack nonce as uint256 (32 bytes)
-  const nonceHex = nonce.toString(16).padStart(64, '0')
-  packed = `0x${nonceHex}` as `0x${string}`
-
-  // Pack each call: address (20 bytes) + uint256 (32 bytes) + bytes (variable)
+  // Build inner digest using encodePacked — exactly mirrors the contract's abi.encodePacked
+  // keccak256(abi.encodePacked(nonce, to0, value0, data0, ...))
+  let encodedCalls = '0x' as `0x${string}`
   for (const call of calls) {
-    const toHex = call.to.toLowerCase().slice(2).padStart(40, '0')
-    const valueHex = call.value.toString(16).padStart(64, '0')
-    const dataHex = call.data.slice(2)
-    packed = `${packed}${toHex}${valueHex}${dataHex}` as `0x${string}`
+    encodedCalls = encodePacked(
+      ['bytes', 'address', 'uint256', 'bytes'],
+      [encodedCalls, call.to, call.value, call.data]
+    )
   }
-
-  const innerDigest = keccak256(packed)
-
-  // eth_sign wraps: keccak256("\x19Ethereum Signed Message:\n32" + digest)
-  const ethPrefix = '\x19Ethereum Signed Message:\n32'
-  const prefixHex = Array.from(new TextEncoder().encode(ethPrefix))
-    .map(b => b.toString(16).padStart(2, '0')).join('')
-  const digestHex = innerDigest.slice(2)
-  const ethSignedHash = keccak256(`0x${prefixHex}${digestHex}` as `0x${string}`)
+  const innerDigest = keccak256(encodePacked(['uint256', 'bytes'], [nonce, encodedCalls]))
 
   inf(`Inner digest: ${innerDigest.slice(0, 20)}...`)
-  inf(`Eth-signed hash: ${ethSignedHash.slice(0, 20)}...`)
 
-  // Sign the eth-signed hash (raw — already prefixed)
-  const innerSig = await eoaAccount.sign({ hash: ethSignedHash })
+  // signMessage with message.raw adds the Ethereum Signed Message prefix —
+  // equivalent to MessageHashUtils.toEthSignedMessageHash inside the contract
+  const innerSig = await eoaAccount.signMessage({ message: { raw: toBytes(innerDigest) } })
   ok(`Inner signature from EOA: ${innerSig.slice(0, 20)}...`)
   inf(`EOA private key never leaves the client — only the signature goes to relayer`)
 
@@ -251,7 +243,10 @@ async function run() {
   // ── Test 14: Revoke delegation ───────────────────────────────────────────
   hdr('Test 14: Revoke Delegation (back to plain EOA)')
   inf(`Revoking sets authorization to zero address — removes code from EOA`)
-  const revokeAuth = await eoaClient.signAuthorization({ contractAddress: '0x0000000000000000000000000000000000000000' })
+  const revokeAuth = await eoaClient.signAuthorization({
+    account: eoaAccount,
+    contractAddress: '0x0000000000000000000000000000000000000000',
+  })
   const revokeTx = await sponsorClient.sendTransaction({ account: sponsorClient.account!, to: eoaAddress, value: 0n, authorizationList: [revokeAuth], chain: null })
   await publicClient.waitForTransactionReceipt({ hash: revokeTx })
   const codeAfter = await publicClient.getBytecode({ address: eoaAddress })
